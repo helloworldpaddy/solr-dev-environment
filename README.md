@@ -212,8 +212,8 @@ bin/solr healthcheck -c books
 ## Docker Setup
 
 ### Prerequisites for Docker
-- Docker
-- Docker Compose
+- Docker (version 20.10 or later)
+- Docker Compose (version 2.0 or later)
 
 ### Quick Start with Docker
 ```bash
@@ -239,14 +239,37 @@ This will:
 # Build and start all services
 docker-compose up --build
 
-# Start only Solr environment
-docker-compose up zookeeper solr1 solr2 solr3
+# Run in detached mode
+docker-compose up --build -d
 
-# View logs
+# View Spring Boot client logs
 docker-compose logs solr-client
 
-# Clean up
+# View all service logs
+docker-compose logs
+
+# Stop all services
 docker-compose down
+
+# Clean up (remove volumes)
+docker-compose down -v
 ```
 
-See <ref_file file="/home/ubuntu/solr-dev/README-Docker.md" /> for detailed Docker documentation.
+### Expected Docker Output
+When running successfully, the Spring Boot client will show:
+```
+solr-spring-client  | Connected to Solr at: http://solr1:8983/solr
+solr-spring-client  | Using collection: books
+solr-spring-client  | Adding book documents to collection via SolrJ
+solr-spring-client  | Added book1 - Status: 0, QTime: 769ms
+solr-spring-client  | Added book2 - Status: 0, QTime: 53ms
+solr-spring-client  | Commit completed - Status: 0, QTime: 137ms
+solr-spring-client  | Query completed - Found 2 documents, QTime: 101ms
+solr-spring-client  | === Query Results ===
+solr-spring-client  | Found 2 documents matching 'Solr*':
+solr-spring-client  | ID: book2, Title: [Solr Cookbook], Author: [Rafal Kuc]
+solr-spring-client  | ID: book1, Title: [Solr in Action], Author: [Trey Grainger]
+solr-spring-client  | Solr SolrJ Client Application completed successfully
+```
+
+See <ref_file file="/home/ubuntu/solr-dev/README-Docker.md" /> for detailed Docker documentation, troubleshooting, and advanced configuration options.
