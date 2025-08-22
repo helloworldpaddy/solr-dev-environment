@@ -1,6 +1,6 @@
-# Solr 9.9 Development Environment with Java SolrJ Client
+# Solr 9.9 Development Environment with Spring Boot SolrJ Client
 
-This project sets up a complete Solr 9.9 development environment in SolrCloud mode with a Java client using SolrJ without Jetty.
+This project sets up a complete Solr 9.9 development environment in SolrCloud mode with a Spring Boot 3.5.3 Java client using SolrJ 9.9.0.
 
 ## Environment Setup
 
@@ -13,7 +13,7 @@ This project sets up a complete Solr 9.9 development environment in SolrCloud mo
 - **Solr 9.9** in SolrCloud mode with 3 nodes (ports 8983, 8984, 8985)
 - **ZooKeeper ensemble** with 3 nodes (ports 2181, 2182, 2183)
 - **Books collection** with 2 shards and replication factor 2
-- **Java client** using SolrJ 9.9.0 with Apache HttpClient5 (Jetty dependencies included but not explicitly used)
+- **Spring Boot 3.5.3 client** using SolrJ 9.9.0 with Spring Boot framework
 
 ## Directory Structure
 ```
@@ -25,10 +25,11 @@ This project sets up a complete Solr 9.9 development environment in SolrCloud mo
 │       ├── node1/
 │       ├── node2/
 │       └── node3/
-└── java-solr-client/              # Maven Java project
+└── java-solr-client/              # Spring Boot Maven project
     ├── pom.xml
     ├── src/main/java/com/example/
-    │   └── SolrClientApp.java
+    │   ├── SolrSpringBootApplication.java
+    │   └── SolrService.java
     └── src/main/resources/
         └── logback.xml
 ```
@@ -71,23 +72,26 @@ bin/solr status
 bin/solr healthcheck -c books
 ```
 
-## Java Client Application
+## Spring Boot Java Client Application
 
 ### Dependencies
-The Maven project includes:
+The Spring Boot Maven project includes:
+- **Spring Boot 3.5.3** framework
 - **Java 17** compilation target
-- **Apache HttpClient5** for HTTP REST calls to Solr
-- **Jackson** for JSON processing
-- **SLF4J + Logback** for logging
+- **SolrJ 9.9.0** client library
+- **SLF4J + Logback** for logging (via Spring Boot)
 
 ### Key Features
-- Connects directly to Solr via HTTP REST API (http://localhost:8983/solr)
-- Uses direct HTTP POST/GET requests to Solr endpoints
+- Spring Boot application with @SpringBootApplication main class
+- SolrService as a Spring @Service component
+- Connects to Solr via SolrJ HttpSolrClient (http://localhost:8983/solr/books)
+- Uses SolrJ API for all Solr operations (add, commit, query, delete)
 - Adds sample book documents with fields: id, title, author
 - Commits changes to ensure persistence
 - Queries documents where title matches "Solr*"
 - Deletes documents by ID
 - Prints formatted results to console
+- CommandLineRunner executes Solr operations on application startup
 
 ### Building and Running
 
@@ -97,23 +101,39 @@ cd ~/solr-dev/java-solr-client
 mvn clean package
 ```
 
-#### Run the Application
+#### Run the Spring Boot Application
 ```bash
-mvn exec:java -Dexec.mainClass="com.example.SolrClientApp"
+mvn spring-boot:run
+```
+
+Or run the packaged JAR:
+```bash
+java -jar target/solr-client-1.0-SNAPSHOT.jar
 ```
 
 ### Expected Output
 ```
-01:58:28.419 [com.example.SolrClientApp.main()] INFO  com.example.SolrClientApp - Starting Solr Client Application
-01:58:28.646 [com.example.SolrClientApp.main()] INFO  com.example.SolrClientApp - Connected to SolrCloud via ZooKeeper: 127.0.0.1:9983
-01:58:28.647 [com.example.SolrClientApp.main()] INFO  com.example.SolrClientApp - Using collection: books
-01:58:28.647 [com.example.SolrClientApp.main()] INFO  com.example.SolrClientApp - Adding book documents to collection
-01:58:29.320 [com.example.SolrClientApp.main()] INFO  com.example.SolrClientApp - Added book1 - Status: 0, QTime: 582ms
-01:58:29.320 [com.example.SolrClientApp.main()] INFO  com.example.SolrClientApp - Added book2 - Status: 0, QTime: 17ms
-01:58:29.321 [com.example.SolrClientApp.main()] INFO  com.example.SolrClientApp - Committing changes to Solr
-01:58:29.460 [com.example.SolrClientApp.main()] INFO  com.example.SolrClientApp - Commit completed - Status: 0, QTime: 130ms
-01:58:29.460 [com.example.SolrClientApp.main()] INFO  com.example.SolrClientApp - Querying books with title matching 'Solr*'
-01:58:29.512 [com.example.SolrClientApp.main()] INFO  com.example.SolrClientApp - Query completed - Found 2 documents, QTime: 46ms
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.3)
+
+17:03:01.159 [main] INFO  c.example.SolrSpringBootApplication - Starting SolrSpringBootApplication using Java 17.0.13
+17:03:01.565 [main] INFO  c.example.SolrSpringBootApplication - Started SolrSpringBootApplication in 0.654 seconds
+17:03:01.567 [main] INFO  com.example.SolrService - Starting Solr SolrJ Client Application with Spring Boot
+17:03:01.707 [main] INFO  com.example.SolrService - Connected to Solr at: http://localhost:8983/solr/books
+17:03:01.708 [main] INFO  com.example.SolrService - Using collection: books
+17:03:01.708 [main] INFO  com.example.SolrService - Adding book documents to collection via SolrJ
+17:03:02.300 [main] INFO  com.example.SolrService - Added book1 - Status: 0, QTime: 523ms
+17:03:02.300 [main] INFO  com.example.SolrService - Added book2 - Status: 0, QTime: 17ms
+17:03:02.300 [main] INFO  com.example.SolrService - Committing changes to Solr via SolrJ
+17:03:02.409 [main] INFO  com.example.SolrService - Commit completed - Status: 0, QTime: 105ms
+17:03:02.409 [main] INFO  com.example.SolrService - Querying books with title matching 'Solr*' via SolrJ
+17:03:02.473 [main] INFO  com.example.SolrService - Query completed - Found 2 documents, QTime: 58ms
 
 === Query Results ===
 Found 2 documents matching 'Solr*':
@@ -127,27 +147,30 @@ Author: [Trey Grainger]
 ---
 === End Results ===
 
-01:58:29.518 [com.example.SolrClientApp.main()] INFO  com.example.SolrClientApp - Solr Client Application completed successfully
+17:03:02.475 [main] INFO  com.example.SolrService - Deleting document with ID: book1 via SolrJ
+17:03:02.486 [main] INFO  com.example.SolrService - Deleted document book1 - Status: 0, QTime: 8ms
+17:03:02.521 [main] INFO  com.example.SolrService - Solr SolrJ Client Application completed successfully
 ```
 
 ## Technical Notes
 
-### HTTP REST API Implementation
-- Uses Apache HttpClient5 for direct HTTP communication with Solr
-- No SolrJ dependencies - pure HTTP REST calls to Solr endpoints
-- Jackson library handles JSON serialization/deserialization
-- Connects directly to Solr node at http://localhost:8983/solr
+### Spring Boot SolrJ Implementation
+- Uses Spring Boot 3.5.3 framework with dependency injection
+- SolrJ 9.9.0 client library for all Solr operations
+- HttpSolrClient connects directly to Solr node at http://localhost:8983/solr/books
+- Spring @Service component encapsulates Solr operations
+- CommandLineRunner executes operations on application startup
 
-### Solr REST Endpoints Used
-- **Add Documents**: `POST /solr/books/update/json/docs`
-- **Commit Changes**: `POST /solr/books/update?commit=true`
-- **Query Documents**: `GET /solr/books/select?q=title:Solr*&fl=id,title,author&wt=json`
-- **Delete Documents**: `POST /solr/books/update` with delete JSON payload
+### SolrJ Operations Used
+- **Add Documents**: `SolrClient.add(SolrInputDocument)`
+- **Commit Changes**: `SolrClient.commit()`
+- **Query Documents**: `SolrClient.query(SolrQuery)` with `title:Solr*`
+- **Delete Documents**: `SolrClient.deleteById(String)`
 
 ### ZooKeeper Configuration
 - External ZooKeeper ensemble runs on ports 2181, 2182, 2183
 - Solr also runs embedded ZooKeeper on port 9983
-- Java client connects directly to Solr HTTP endpoint (no ZooKeeper client needed)
+- Spring Boot client connects directly to Solr HTTP endpoint via SolrJ (no ZooKeeper client needed)
 
 ### Collection Configuration
 - **Name**: books
