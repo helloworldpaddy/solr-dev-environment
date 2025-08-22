@@ -9,7 +9,6 @@ solr-9.9.0/zookeeper/*/data/
 solr-9.9.0/zookeeper/*/logs/
 
 # Maven
-java-solr-client/target/
 java-solr-client/.mvn/
 java-solr-client/mvnw
 java-solr-client/mvnw.cmd
