@@ -208,3 +208,45 @@ curl "http://localhost:8983/solr/admin/collections?action=LIST"
 # Check collection status
 bin/solr healthcheck -c books
 ```
+
+## Docker Setup
+
+### Prerequisites for Docker
+- Docker
+- Docker Compose
+
+### Quick Start with Docker
+```bash
+cd ~/solr-dev
+docker-compose up --build
+```
+
+This will:
+- Start ZooKeeper container
+- Start 3 Solr nodes (ports 8983, 8984, 8985)
+- Create the `books` collection automatically
+- Build and run the Spring Boot client application
+
+### Docker Services
+- **ZooKeeper**: Port 2181
+- **Solr Node 1**: Port 8983 (primary, creates collection)
+- **Solr Node 2**: Port 8984
+- **Solr Node 3**: Port 8985
+- **Spring Boot Client**: Connects to Solr via internal Docker network
+
+### Docker Commands
+```bash
+# Build and start all services
+docker-compose up --build
+
+# Start only Solr environment
+docker-compose up zookeeper solr1 solr2 solr3
+
+# View logs
+docker-compose logs solr-client
+
+# Clean up
+docker-compose down
+```
+
+See <ref_file file="/home/ubuntu/solr-dev/README-Docker.md" /> for detailed Docker documentation.

@@ -19,13 +19,13 @@ import java.io.IOException;
 public class SolrService {
     private static final Logger logger = LoggerFactory.getLogger(SolrService.class);
     
-    private static final String SOLR_BASE_URL = "http://localhost:8983/solr";
+    private static final String SOLR_BASE_URL = System.getenv().getOrDefault("SOLR_URL", "http://localhost:8983/solr/books");
     private static final String COLLECTION_NAME = "books";
     
     public void runSolrOperations() {
         logger.info("Starting Solr SolrJ Client Application with Spring Boot");
         
-        String solrUrl = SOLR_BASE_URL + "/" + COLLECTION_NAME;
+        String solrUrl = SOLR_BASE_URL;
         
         try (SolrClient solrClient = new HttpSolrClient.Builder(solrUrl).build()) {
             
