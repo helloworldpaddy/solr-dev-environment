@@ -1,0 +1,36 @@
+# Solr data and logs
+solr-9.9.0/server/logs/
+solr-9.9.0/server/solr/*/data/
+solr-9.9.0/example/
+solr-9.9.0/docs/
+
+# ZooKeeper data
+solr-9.9.0/zookeeper/*/data/
+solr-9.9.0/zookeeper/*/logs/
+
+# Maven
+java-solr-client/target/
+java-solr-client/.mvn/
+java-solr-client/mvnw
+java-solr-client/mvnw.cmd
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.eclipse/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log
+*.pid
+
+# Solr installation archive
+solr-9.9.0.tgz
+
+# Exclude entire Solr binary installation (too large for git)
+solr-9.9.0/
