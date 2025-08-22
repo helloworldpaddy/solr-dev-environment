@@ -91,7 +91,7 @@ services:
     depends_on:
       - collection-creator
     environment:
-      - SOLR_URL=http://solr1:8983/solr/books
+      - SOLR_URL=http://solr1:8983/solr
     networks:
       - solr-network
     command: >

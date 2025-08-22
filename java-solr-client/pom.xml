@@ -36,6 +36,13 @@
             <version>${solr.version}</version>
         </dependency>
 
+        <!-- Jetty HTTP Client for SolrJ -->
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-client</artifactId>
+            <version>11.0.26</version>
+        </dependency>
+
         <!-- Spring Boot Test Starter -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

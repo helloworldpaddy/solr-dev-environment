@@ -19,17 +19,17 @@ import java.io.IOException;
 public class SolrService {
     private static final Logger logger = LoggerFactory.getLogger(SolrService.class);
     
-    private static final String SOLR_BASE_URL = System.getenv().getOrDefault("SOLR_URL", "http://localhost:8983/solr/books");
     private static final String COLLECTION_NAME = "books";
     
     public void runSolrOperations() {
         logger.info("Starting Solr SolrJ Client Application with Spring Boot");
         
-        String solrUrl = SOLR_BASE_URL;
+        String solrUrl = System.getenv().getOrDefault("SOLR_URL", "http://localhost:8983/solr");
+        String collectionUrl = solrUrl;
         
-        try (SolrClient solrClient = new HttpSolrClient.Builder(solrUrl).build()) {
+        try (HttpSolrClient solrClient = new HttpSolrClient.Builder(collectionUrl).build()) {
             
-            logger.info("Connected to Solr at: {}", solrUrl);
+            logger.info("Connected to Solr at: {}", collectionUrl);
             logger.info("Using collection: {}", COLLECTION_NAME);
             
             addBookDocuments(solrClient);
@@ -65,8 +65,8 @@ public class SolrService {
         book2.addField("title", "Solr Cookbook");
         book2.addField("author", "Rafal Kuc");
         
-        UpdateResponse response1 = solrClient.add(book1);
-        UpdateResponse response2 = solrClient.add(book2);
+        UpdateResponse response1 = solrClient.add(COLLECTION_NAME, book1);
+        UpdateResponse response2 = solrClient.add(COLLECTION_NAME, book2);
         
         logger.info("Added book1 - Status: {}, QTime: {}ms", response1.getStatus(), response1.getQTime());
         logger.info("Added book2 - Status: {}, QTime: {}ms", response2.getStatus(), response2.getQTime());
@@ -75,7 +75,7 @@ public class SolrService {
     private void commitChanges(SolrClient solrClient) throws SolrServerException, IOException {
         logger.info("Committing changes to Solr via SolrJ");
         
-        UpdateResponse commitResponse = solrClient.commit();
+        UpdateResponse commitResponse = solrClient.commit(COLLECTION_NAME);
         logger.info("Commit completed - Status: {}, QTime: {}ms", 
                    commitResponse.getStatus(), commitResponse.getQTime());
     }
@@ -87,7 +87,7 @@ public class SolrService {
         query.setQuery("title:Solr*");
         query.setFields("id", "title", "author");
         
-        QueryResponse response = solrClient.query(query);
+        QueryResponse response = solrClient.query(COLLECTION_NAME, query);
         SolrDocumentList documents = response.getResults();
         
         logger.info("Query completed - Found {} documents, QTime: {}ms", 
@@ -109,7 +109,7 @@ public class SolrService {
     private void deleteDocument(SolrClient solrClient, String documentId) throws SolrServerException, IOException {
         logger.info("Deleting document with ID: {} via SolrJ", documentId);
         
-        UpdateResponse deleteResponse = solrClient.deleteById(documentId);
+        UpdateResponse deleteResponse = solrClient.deleteById(COLLECTION_NAME, documentId);
         logger.info("Deleted document {} - Status: {}, QTime: {}ms", 
                    documentId, deleteResponse.getStatus(), deleteResponse.getQTime());
     }
