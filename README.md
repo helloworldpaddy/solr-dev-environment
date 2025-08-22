@@ -76,16 +76,17 @@ bin/solr healthcheck -c books
 ### Dependencies
 The Maven project includes:
 - **Java 17** compilation target
-- **SolrJ 9.9.0** for Solr connectivity
-- **Apache HttpClient5** for HTTP transport
+- **Apache HttpClient5** for HTTP REST calls to Solr
+- **Jackson** for JSON processing
 - **SLF4J + Logback** for logging
 
 ### Key Features
-- Connects to SolrCloud via ZooKeeper (127.0.0.1:9983)
-- Uses CloudSolrClient with HTTP/2 transport
+- Connects directly to Solr via HTTP REST API (http://localhost:8983/solr)
+- Uses direct HTTP POST/GET requests to Solr endpoints
 - Adds sample book documents with fields: id, title, author
 - Commits changes to ensure persistence
 - Queries documents where title matches "Solr*"
+- Deletes documents by ID
 - Prints formatted results to console
 
 ### Building and Running
@@ -131,15 +132,22 @@ Author: [Trey Grainger]
 
 ## Technical Notes
 
-### SolrJ and Jetty Dependencies
-- SolrJ 9.9.0's CloudSolrClient uses Http2SolrClient internally, which has dependencies on Jetty for HTTP/2 transport
-- While Jetty dependencies are included in the classpath, the application uses CloudSolrClient's default configuration
-- The CloudSolrClient connects via ZooKeeper and automatically discovers Solr nodes
+### HTTP REST API Implementation
+- Uses Apache HttpClient5 for direct HTTP communication with Solr
+- No SolrJ dependencies - pure HTTP REST calls to Solr endpoints
+- Jackson library handles JSON serialization/deserialization
+- Connects directly to Solr node at http://localhost:8983/solr
+
+### Solr REST Endpoints Used
+- **Add Documents**: `POST /solr/books/update/json/docs`
+- **Commit Changes**: `POST /solr/books/update?commit=true`
+- **Query Documents**: `GET /solr/books/select?q=title:Solr*&fl=id,title,author&wt=json`
+- **Delete Documents**: `POST /solr/books/update` with delete JSON payload
 
 ### ZooKeeper Configuration
 - External ZooKeeper ensemble runs on ports 2181, 2182, 2183
 - Solr also runs embedded ZooKeeper on port 9983
-- Java client connects to embedded ZooKeeper (127.0.0.1:9983) for optimal compatibility
+- Java client connects directly to Solr HTTP endpoint (no ZooKeeper client needed)
 
 ### Collection Configuration
 - **Name**: books

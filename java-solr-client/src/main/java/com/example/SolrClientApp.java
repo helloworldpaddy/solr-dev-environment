@@ -1,104 +1,184 @@
 package com.example;
 
-import org.apache.solr.client.solrj.SolrClient;
-import org.apache.solr.client.solrj.SolrQuery;
-import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.client.solrj.impl.CloudSolrClient;
-import org.apache.solr.client.solrj.impl.HttpSolrClient;
-import org.apache.solr.client.solrj.response.QueryResponse;
-import org.apache.solr.client.solrj.response.UpdateResponse;
-import org.apache.solr.common.SolrDocument;
-import org.apache.solr.common.SolrDocumentList;
-import org.apache.solr.common.SolrInputDocument;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Optional;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 public class SolrClientApp {
     private static final Logger logger = LoggerFactory.getLogger(SolrClientApp.class);
     
-    private static final String ZK_HOST = "127.0.0.1:9983";
+    private static final String SOLR_BASE_URL = "http://localhost:8983/solr";
     private static final String COLLECTION_NAME = "books";
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     
     public static void main(String[] args) {
-        logger.info("Starting Solr Client Application");
+        logger.info("Starting Solr HTTP REST Client Application");
         
-        try (CloudSolrClient solrClient = new CloudSolrClient.Builder(Arrays.asList(ZK_HOST), Optional.empty())
-                .build()) {
+        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
             
-            solrClient.setDefaultCollection(COLLECTION_NAME);
-            
-            logger.info("Connected to SolrCloud via ZooKeeper: {}", ZK_HOST);
+            logger.info("Connected to Solr at: {}", SOLR_BASE_URL);
             logger.info("Using collection: {}", COLLECTION_NAME);
             
-            addBookDocuments(solrClient);
+            addBookDocuments(httpClient);
             
-            commitChanges(solrClient);
+            commitChanges(httpClient);
             
-            queryBooks(solrClient);
+            queryBooks(httpClient);
             
-            logger.info("Solr Client Application completed successfully");
+            deleteDocument(httpClient, "book1");
+            
+            commitChanges(httpClient);
+            
+            queryBooks(httpClient);
+            
+            logger.info("Solr HTTP REST Client Application completed successfully");
             
         } catch (Exception e) {
-            logger.error("Error in Solr Client Application", e);
+            logger.error("Error in Solr HTTP REST Client Application", e);
             System.exit(1);
         }
     }
     
-    private static void addBookDocuments(SolrClient solrClient) throws SolrServerException, IOException {
-        logger.info("Adding book documents to collection");
+    private static void addBookDocuments(CloseableHttpClient httpClient) throws IOException {
+        logger.info("Adding book documents to collection via HTTP REST");
         
-        SolrInputDocument book1 = new SolrInputDocument();
-        book1.addField("id", "book1");
-        book1.addField("title", "Solr in Action");
-        book1.addField("author", "Trey Grainger");
+        String updateUrl = SOLR_BASE_URL + "/" + COLLECTION_NAME + "/update/json/docs";
         
-        SolrInputDocument book2 = new SolrInputDocument();
-        book2.addField("id", "book2");
-        book2.addField("title", "Solr Cookbook");
-        book2.addField("author", "Rafal Kuc");
+        String book1Json = """
+            {
+                "id": "book1",
+                "title": "Solr in Action",
+                "author": "Trey Grainger"
+            }
+            """;
         
-        UpdateResponse response1 = solrClient.add(book1);
-        UpdateResponse response2 = solrClient.add(book2);
+        HttpPost post1 = new HttpPost(updateUrl);
+        post1.setEntity(new StringEntity(book1Json, ContentType.APPLICATION_JSON));
         
-        logger.info("Added book1 - Status: {}, QTime: {}ms", response1.getStatus(), response1.getQTime());
-        logger.info("Added book2 - Status: {}, QTime: {}ms", response2.getStatus(), response2.getQTime());
-    }
-    
-    private static void commitChanges(SolrClient solrClient) throws SolrServerException, IOException {
-        logger.info("Committing changes to Solr");
-        
-        UpdateResponse commitResponse = solrClient.commit();
-        logger.info("Commit completed - Status: {}, QTime: {}ms", 
-                   commitResponse.getStatus(), commitResponse.getQTime());
-    }
-    
-    private static void queryBooks(SolrClient solrClient) throws SolrServerException, IOException {
-        logger.info("Querying books with title matching 'Solr*'");
-        
-        SolrQuery query = new SolrQuery();
-        query.setQuery("title:Solr*");
-        query.setFields("id", "title", "author");
-        
-        QueryResponse response = solrClient.query(query);
-        SolrDocumentList documents = response.getResults();
-        
-        logger.info("Query completed - Found {} documents, QTime: {}ms", 
-                   documents.getNumFound(), response.getQTime());
-        
-        System.out.println("\n=== Query Results ===");
-        System.out.println("Found " + documents.getNumFound() + " documents matching 'Solr*':");
-        
-        for (SolrDocument doc : documents) {
-            System.out.println("ID: " + doc.getFieldValue("id"));
-            System.out.println("Title: " + doc.getFieldValue("title"));
-            System.out.println("Author: " + doc.getFieldValue("author"));
-            System.out.println("---");
+        try (CloseableHttpResponse response1 = httpClient.execute(post1)) {
+            int statusCode1 = response1.getCode();
+            String responseBody1 = new String(response1.getEntity().getContent().readAllBytes());
+            JsonNode jsonResponse1 = objectMapper.readTree(responseBody1);
+            
+            logger.info("Added book1 - Status: {}, QTime: {}ms", 
+                       statusCode1, jsonResponse1.path("responseHeader").path("QTime").asInt());
         }
         
-        System.out.println("=== End Results ===\n");
+        String book2Json = """
+            {
+                "id": "book2",
+                "title": "Solr Cookbook",
+                "author": "Rafal Kuc"
+            }
+            """;
+        
+        HttpPost post2 = new HttpPost(updateUrl);
+        post2.setEntity(new StringEntity(book2Json, ContentType.APPLICATION_JSON));
+        
+        try (CloseableHttpResponse response2 = httpClient.execute(post2)) {
+            int statusCode2 = response2.getCode();
+            String responseBody2 = new String(response2.getEntity().getContent().readAllBytes());
+            JsonNode jsonResponse2 = objectMapper.readTree(responseBody2);
+            
+            logger.info("Added book2 - Status: {}, QTime: {}ms", 
+                       statusCode2, jsonResponse2.path("responseHeader").path("QTime").asInt());
+        }
+    }
+    
+    private static void commitChanges(CloseableHttpClient httpClient) throws IOException {
+        logger.info("Committing changes to Solr via HTTP REST");
+        
+        String commitUrl = SOLR_BASE_URL + "/" + COLLECTION_NAME + "/update?commit=true";
+        
+        HttpPost commitPost = new HttpPost(commitUrl);
+        commitPost.setEntity(new StringEntity("{}", ContentType.APPLICATION_JSON));
+        
+        try (CloseableHttpResponse response = httpClient.execute(commitPost)) {
+            int statusCode = response.getCode();
+            String responseBody = new String(response.getEntity().getContent().readAllBytes());
+            JsonNode jsonResponse = objectMapper.readTree(responseBody);
+            
+            logger.info("Commit completed - Status: {}, QTime: {}ms", 
+                       statusCode, jsonResponse.path("responseHeader").path("QTime").asInt());
+        }
+    }
+    
+    private static void queryBooks(CloseableHttpClient httpClient) throws IOException {
+        logger.info("Querying books with title matching 'Solr*' via HTTP REST");
+        
+        String query = URLEncoder.encode("title:Solr*", StandardCharsets.UTF_8);
+        String fields = URLEncoder.encode("id,title,author", StandardCharsets.UTF_8);
+        String queryUrl = SOLR_BASE_URL + "/" + COLLECTION_NAME + "/select?q=" + query + "&fl=" + fields + "&wt=json";
+        
+        HttpGet get = new HttpGet(queryUrl);
+        
+        try (CloseableHttpResponse response = httpClient.execute(get)) {
+            int statusCode = response.getCode();
+            String responseBody = new String(response.getEntity().getContent().readAllBytes());
+            JsonNode jsonResponse = objectMapper.readTree(responseBody);
+            
+            JsonNode docs = jsonResponse.path("response").path("docs");
+            int numFound = jsonResponse.path("response").path("numFound").asInt();
+            int qTime = jsonResponse.path("responseHeader").path("QTime").asInt();
+            
+            logger.info("Query completed - Found {} documents, QTime: {}ms", numFound, qTime);
+            
+            System.out.println("\n=== Query Results ===");
+            System.out.println("Found " + numFound + " documents matching 'Solr*':");
+            
+            for (JsonNode doc : docs) {
+                System.out.println("ID: " + doc.path("id").asText());
+                
+                JsonNode titleNode = doc.path("title");
+                String title = titleNode.isArray() ? titleNode.get(0).asText() : titleNode.asText();
+                System.out.println("Title: " + title);
+                
+                JsonNode authorNode = doc.path("author");
+                String author = authorNode.isArray() ? authorNode.get(0).asText() : authorNode.asText();
+                System.out.println("Author: " + author);
+                
+                System.out.println("---");
+            }
+            
+            System.out.println("=== End Results ===\n");
+        }
+    }
+    
+    private static void deleteDocument(CloseableHttpClient httpClient, String documentId) throws IOException {
+        logger.info("Deleting document with ID: {} via HTTP REST", documentId);
+        
+        String deleteUrl = SOLR_BASE_URL + "/" + COLLECTION_NAME + "/update";
+        
+        String deleteJson = """
+            {
+                "delete": {
+                    "id": "%s"
+                }
+            }
+            """.formatted(documentId);
+        
+        HttpPost deletePost = new HttpPost(deleteUrl);
+        deletePost.setEntity(new StringEntity(deleteJson, ContentType.APPLICATION_JSON));
+        
+        try (CloseableHttpResponse response = httpClient.execute(deletePost)) {
+            int statusCode = response.getCode();
+            String responseBody = new String(response.getEntity().getContent().readAllBytes());
+            JsonNode jsonResponse = objectMapper.readTree(responseBody);
+            
+            logger.info("Deleted document {} - Status: {}, QTime: {}ms", 
+                       documentId, statusCode, jsonResponse.path("responseHeader").path("QTime").asInt());
+        }
     }
 }
